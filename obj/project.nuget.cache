@@ -1,0 +1,12 @@
+{
+  "version": 2,
+  "dgSpecHash": "J2IZ+wOg9eI=",
+  "success": true,
+  "projectFilePath": "C:\\Users\\Danijel.Wynyard\\source\\repos\\SeleniumTest\\SeleniumTest.csproj",
+  "expectedPackageFiles": [
+    "C:\\Users\\Danijel.Wynyard\\.nuget\\packages\\selenium.support\\4.25.0\\selenium.support.4.25.0.nupkg.sha512",
+    "C:\\Users\\Danijel.Wynyard\\.nuget\\packages\\selenium.webdriver\\4.25.0\\selenium.webdriver.4.25.0.nupkg.sha512",
+    "C:\\Users\\Danijel.Wynyard\\.nuget\\packages\\selenium.webdriver.chromedriver\\130.0.6723.6900\\selenium.webdriver.chromedriver.130.0.6723.6900.nupkg.sha512"
+  ],
+  "logs": []
+}

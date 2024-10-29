@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Selenium.Support" Version="4.25.0" />
+    <PackageReference Include="Selenium.WebDriver" Version="4.25.0" />
+    <PackageReference Include="Selenium.WebDriver.ChromeDriver" Version="130.0.6723.6900" />
+  </ItemGroup>
+
+  <!-- Ensures the Drivers directory and its contents are copied to the output directory -->
+  <ItemGroup>
+    <None Update="Drivers\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+</Project>
