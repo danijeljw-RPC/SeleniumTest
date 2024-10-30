@@ -1,3 +1,4 @@
+using OpenQA.Selenium;
 using SeleniumTest.Browser;
 using SeleniumTest.Configuration;
 using SeleniumTest.Helpers;
@@ -42,7 +43,16 @@ namespace SeleniumTest
             string driverPath = await ChromeHelper.DownloadAndExtract(selectedVersion.ChromeDriverUrl!, driverBasePath);
 
             // Launch Chrome with the specified paths
-            await BrowserLauncher.LaunchChrome(chromePath, driverPath);
+            IWebDriver driver = BrowserLauncher.LaunchChrome(chromePath, driverPath);
+
+            // Instantiate SeleniumInterpreter with the existing driver instance
+            var interpreter = new SeleniumInterpreter(driver);
+
+            // Define the path to your instruction file
+            string instructionFilePath = "path_to_your_text_file.txt";
+
+            // Execute the commands in the instruction file
+            await interpreter.ExecuteScriptAsync(instructionFilePath);
         }
     }
 }

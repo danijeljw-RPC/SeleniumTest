@@ -1,24 +1,43 @@
-using OpenQA.Selenium.Chrome;
-using OpenQA.Selenium.Support.UI;
 using OpenQA.Selenium;
+using OpenQA.Selenium.Support.Events;
+using OpenQA.Selenium.Support.UI;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace SeleniumTest.Services
 {
     public class SeleniumInterpreter
     {
         private readonly IWebDriver driver;
+        private readonly Dictionary<string, string> variables = new Dictionary<string, string>();
 
-        public SeleniumInterpreter()
+        // Accept an existing IWebDriver instance
+        public SeleniumInterpreter(IWebDriver webDriver)
         {
-            driver = new ChromeDriver();
+            driver = webDriver;
         }
 
         public async Task ExecuteScriptAsync(string filePath)
         {
             var commands = await File.ReadAllLinesAsync(filePath);
-            foreach (var command in commands)
+            for (int i = 0; i < commands.Length; i++)
             {
-                await ProcessCommandAsync(command.Trim());
+                var command = commands[i].Trim();
+                if (command.StartsWith("For each element"))
+                {
+                    var selector = ParseLocator(command);
+                    var elements = driver.FindElements(selector);
+                    foreach (var element in elements.Take(10)) // Example: taking only top 10
+                    {
+                        i = await ExecuteLoopCommandsAsync(commands, i + 1, element);
+                    }
+                }
+                else
+                {
+                    await ProcessCommandAsync(command);
+                }
             }
             driver.Quit();
         }
@@ -31,6 +50,13 @@ namespace SeleniumTest.Services
                     {
                         var url = command.Replace("Open URL ", "").Trim();
                         await Task.Run(() => driver.Navigate().GoToUrl(url));
+                        break;
+                    }
+
+                case string s when s.StartsWith("Submit element"):
+                    {
+                        var locator = ParseLocator(command);
+                        await Task.Run(() => driver.FindElement(locator).Submit());
                         break;
                     }
 
@@ -102,22 +128,101 @@ namespace SeleniumTest.Services
                         break;
                     }
 
+                case string s when s.StartsWith("Find element by"):
+                    {
+                        var parts = command.Split("and get");
+                        var locator = ParseLocator(parts[0]);
+                        var element = driver.FindElement(locator);
+
+                        if (parts[1].Contains("text as"))
+                        {
+                            var variableName = parts[1].Split("text as")[1].Trim();
+                            variables[variableName] = element.Text;
+                        }
+                        else if (parts[1].Contains("attribute"))
+                        {
+                            var attribute = parts[1].Split("attribute")[1].Split("as")[0].Trim();
+                            var variableName = parts[1].Split("as")[1].Trim();
+                            variables[variableName] = element.GetAttribute(attribute);
+                        }
+                        break;
+                    }
+
+                case string s when s.StartsWith("Print"):
+                    {
+                        var message = ReplacePlaceholders(command.Replace("Print ", "").Trim());
+                        Console.WriteLine(message);
+                        break;
+                    }
+
                 default:
                     throw new ArgumentException($"Command '{command}' is not recognized.");
             }
         }
 
+        private async Task<int> ExecuteLoopCommandsAsync(string[] commands, int startIndex, IWebElement element)
+        {
+            for (int i = startIndex; i < commands.Length; i++)
+            {
+                var command = commands[i].Trim();
+
+                if (command.StartsWith("End loop"))
+                {
+                    return i; // Exit loop
+                }
+
+                if (command.StartsWith("Find element by"))
+                {
+                    var parts = command.Split("and get");
+                    var locator = ParseLocator(parts[0]);
+                    var loopElement = element.FindElement(locator);
+
+                    if (parts[1].Contains("text as"))
+                    {
+                        var variableName = parts[1].Split("text as")[1].Trim();
+                        variables[variableName] = loopElement.Text;
+                    }
+                    else if (parts[1].Contains("attribute"))
+                    {
+                        var attribute = parts[1].Split("attribute")[1].Split("as")[0].Trim();
+                        var variableName = parts[1].Split("as")[1].Trim();
+                        variables[variableName] = loopElement.GetAttribute(attribute);
+                    }
+                }
+                else if (command.StartsWith("Print"))
+                {
+                    var message = ReplacePlaceholders(command.Replace("Print ", "").Trim());
+                    Console.WriteLine(message);
+                }
+                else
+                {
+                    await ProcessCommandAsync(command);
+                }
+            }
+
+            return commands.Length; // In case "End loop" is not found
+        }
+
+        private string ReplacePlaceholders(string message)
+        {
+            foreach (var variable in variables)
+            {
+                message = message.Replace($"{{{variable.Key}}}", variable.Value);
+            }
+            return message;
+        }
+
         private By ParseLocator(string text)
         {
-            if (text.Contains("by ID"))
-                return By.Id(text.Split("by ID")[1].Trim());
-            if (text.Contains("by Name"))
-                return By.Name(text.Split("by Name")[1].Trim());
-            if (text.Contains("by Class"))
-                return By.ClassName(text.Split("by Class")[1].Trim());
-            if (text.Contains("by XPath"))
-                return By.XPath(text.Split("by XPath")[1].Trim());
-            throw new ArgumentException("Locator type not recognized.");
+            return text switch
+            {
+                var t when t.Contains("by ID") => By.Id(text.Split("by ID")[1].Trim()),
+                var t when t.Contains("by Name") => By.Name(text.Split("by Name")[1].Trim()),
+                var t when t.Contains("by Class") => By.ClassName(text.Split("by Class")[1].Trim()),
+                var t when t.Contains("by XPath") => By.XPath(text.Split("by XPath")[1].Trim()),
+                var t when t.Contains("by CSS selector") => By.CssSelector(text.Split("by CSS selector")[1].Trim()),
+                _ => throw new ArgumentException("Locator type not recognized.")
+            };
         }
 
         private int ParseSeconds(string command)
@@ -132,4 +237,3 @@ namespace SeleniumTest.Services
         }
     }
 }
-

@@ -1,0 +1,14 @@
+﻿Open URL https://www.google.com.au
+Wait for element by Name q to be visible for 5 seconds
+Enter text "OpenAI ChatGPT" into element by Name q
+Submit element by Name q
+Wait for 2 seconds
+Take screenshot and save as results_page.png
+Find elements by CSS selector div.g and take top 10
+
+For each element:
+    Find element by CSS selector h3 and get text as title
+    Find element by CSS selector a and get attribute href as url
+Print "Top 10 Search Results:"
+For each result:
+    Print "Title: {title}, URL: {url}"
