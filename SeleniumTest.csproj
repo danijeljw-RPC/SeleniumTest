@@ -8,6 +8,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="PDFsharp" Version="6.1.1" />
+    <PackageReference Include="PDFsharp-MigraDoc" Version="6.1.1" />
     <PackageReference Include="Selenium.Support" Version="4.25.0" />
     <PackageReference Include="Selenium.WebDriver" Version="4.25.0" />
     <PackageReference Include="Selenium.WebDriver.ChromeDriver" Version="130.0.6723.6900" />

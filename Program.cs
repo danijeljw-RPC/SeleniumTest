@@ -1,9 +1,7 @@
-﻿using System;
-using System.IO;
-using System.Threading.Tasks;
-using OpenQA.Selenium;
-using OpenQA.Selenium.Chrome;
-using OpenQA.Selenium.Support.UI;
+using SeleniumTest.Browser;
+using SeleniumTest.Configuration;
+using SeleniumTest.Helpers;
+using SeleniumTest.Services;
 
 namespace SeleniumTest
 {
@@ -11,49 +9,40 @@ namespace SeleniumTest
     {
         static async Task Main(string[] args)
         {
-            await RunAsync();
-        }
+            // Extract version and browser from command-line arguments
+            string versionArg = args.FirstOrDefault(a => a.StartsWith("--version="))?.Split('=')[1] ?? "132.0.6804.0";
+            string browser = args.FirstOrDefault(a => a.StartsWith("--browser="))?.Split('=')[1] ?? "google-chrome";
 
-        static async Task RunAsync()
-        {
-            // Define path to ChromeDriver (assuming it's in "Drivers" folder in the output directory)
-            string driverPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Drivers");
+            // Detect platform (win64, win32, etc.)
+            string platform = PlatformHelper.GetPlatform();
 
-            var options = new ChromeOptions();
-            options.AddArgument("--headless");
-            options.AddArgument("--disable-gpu");
-            options.AddArgument("--no-sandbox");
-            options.AddArgument("--disable-dev-shm-usage");
-
-            // Pass the driver path to ChromeDriver
-            using IWebDriver driver = new ChromeDriver(driverPath, options);
-
-            // Navigate to Google
-            driver.Navigate().GoToUrl("https://www.google.com");
-
-            // Find the search box by name attribute and enter "Selenium C#"
-            IWebElement searchBox = await FindElementAsync(driver, By.Name("q"));
-            searchBox.SendKeys("Selenium C#");
-
-            // Submit the search
-            searchBox.Submit();
-
-            // Wait for results to load and get the title of the first result
-            IWebElement firstResult = await FindElementAsync(driver, By.CssSelector("h3"));
-            Console.WriteLine("First result title: " + firstResult.Text);
-
-            // Close the driver
-            driver.Quit();
-        }
-
-        // Async helper method to find an element with a wait
-        static async Task<IWebElement> FindElementAsync(IWebDriver driver, By by, int timeoutInSeconds = 10)
-        {
-            return await Task.Run(() =>
+            // Determine JSON URL based on selected browser
+            var jsonUrl = browser switch
             {
-                var wait = new WebDriverWait(driver, TimeSpan.FromSeconds(timeoutInSeconds));
-                return wait.Until(drv => drv.FindElement(by));
-            });
+                "google-chrome" => "https://googlechromelabs.github.io/chrome-for-testing/known-good-versions-with-downloads.json",
+                _ => throw new ArgumentException("Unsupported browser")
+            };
+
+            // Retrieve the selected version information from the JSON data
+            var selectedVersion = await VersionService.GetSelectedVersion(jsonUrl, versionArg, platform);
+
+            if (selectedVersion == null)
+            {
+                Console.WriteLine("The required version or downloads are unavailable.");
+                return;
+            }
+
+            // Set base paths for Chrome and ChromeDriver directories, keeping browser and version structure
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string chromeBasePath = Path.Combine(baseDir, "Browsers", browser, selectedVersion.Version!);
+            string driverBasePath = Path.Combine(baseDir, "Drivers", browser, selectedVersion.Version!);
+
+            // Download and extract Chrome and ChromeDriver to the appropriate directories
+            string chromePath = await ChromeHelper.DownloadAndExtract(selectedVersion.ChromeUrl!, chromeBasePath);
+            string driverPath = await ChromeHelper.DownloadAndExtract(selectedVersion.ChromeDriverUrl!, driverBasePath);
+
+            // Launch Chrome with the specified paths
+            await BrowserLauncher.LaunchChrome(chromePath, driverPath);
         }
     }
 }
